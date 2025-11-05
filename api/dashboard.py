@@ -34,7 +34,28 @@ st.caption(f"Fonte de dados: {metrics['data_source']}")
 
 st.subheader("📈 Requisições por Hora")
 requests_df = pd.DataFrame(data["historical_data"]["http_requests_timeline"])
-requests_df["timestamp"] = pd.to_datetime(requests_df["timestamp"])
+# Garantir que existe uma coluna de timestamp antes de converter
+if "timestamp" in requests_df.columns:
+    requests_df["timestamp"] = pd.to_datetime(requests_df["timestamp"], errors="coerce")
+else:
+    # Tenta alternativas comuns
+    alt_cols = ["created_at", "date", "datetime"]
+    used = None
+    for alt in alt_cols:
+        if alt in requests_df.columns:
+            requests_df["timestamp"] = pd.to_datetime(requests_df[alt], errors="coerce")
+            st.warning(f"Coluna 'timestamp' não encontrada. Usando '{alt}' como timestamp.")
+            used = alt
+            break
+    if used is None:
+        # Tenta converter o índice para datetime
+        try:
+            requests_df["timestamp"] = pd.to_datetime(requests_df.index, errors="coerce")
+            st.warning("Coluna 'timestamp' não encontrada. Convertendo índice para timestamp (valores inválidos ficarão NaT).")
+        except Exception:
+            # Cria coluna vazia com NaT para evitar crash e mostrar mensagem
+            requests_df["timestamp"] = pd.NaT
+            st.error("Coluna 'timestamp' não encontrada e não foi possível inferir; gráficos podem ficar vazios.")
 
 chart = alt.Chart(requests_df).mark_line(point=True).encode(
     x="timestamp:T",
@@ -46,7 +67,25 @@ st.altair_chart(chart, use_container_width=True)
 
 st.subheader("⏱️ Tempos de Resposta (50, 95, 99)")
 response_df = pd.DataFrame(data["historical_data"]["response_times_timeline"])
-response_df["timestamp"] = pd.to_datetime(response_df["timestamp"])
+if "timestamp" in response_df.columns:
+    response_df["timestamp"] = pd.to_datetime(response_df["timestamp"], errors="coerce")
+else:
+    # tenta alternativas e fallback similar ao requests_df
+    alt_cols = ["created_at", "date", "datetime"]
+    used = None
+    for alt in alt_cols:
+        if alt in response_df.columns:
+            response_df["timestamp"] = pd.to_datetime(response_df[alt], errors="coerce")
+            st.warning(f"Coluna 'timestamp' não encontrada em response_times_timeline. Usando '{alt}' como timestamp.")
+            used = alt
+            break
+    if used is None:
+        try:
+            response_df["timestamp"] = pd.to_datetime(response_df.index, errors="coerce")
+            st.warning("Convertendo índice para timestamp no response_df; valores inválidos ficarão NaT.")
+        except Exception:
+            response_df["timestamp"] = pd.NaT
+            st.error("Coluna 'timestamp' não encontrada em response_times_timeline; gráficos podem ficar vazios.")
 response_df = response_df.melt(id_vars=["timestamp"], var_name="percentil", value_name="tempo")
 
 chart2 = alt.Chart(response_df).mark_line(point=True).encode(
@@ -60,7 +99,25 @@ st.altair_chart(chart2, use_container_width=True)
 
 st.subheader("🖥️ Uso de Sistema")
 sys_df = pd.DataFrame(data["historical_data"]["system_metrics_timeline"])
-sys_df["timestamp"] = pd.to_datetime(sys_df["timestamp"])
+if "timestamp" in sys_df.columns:
+    sys_df["timestamp"] = pd.to_datetime(sys_df["timestamp"], errors="coerce")
+else:
+    # tenta conversão por alternativas
+    alt_cols = ["created_at", "date", "datetime"]
+    used = None
+    for alt in alt_cols:
+        if alt in sys_df.columns:
+            sys_df["timestamp"] = pd.to_datetime(sys_df[alt], errors="coerce")
+            st.warning(f"Coluna 'timestamp' não encontrada em system_metrics_timeline. Usando '{alt}' como timestamp.")
+            used = alt
+            break
+    if used is None:
+        try:
+            sys_df["timestamp"] = pd.to_datetime(sys_df.index, errors="coerce")
+            st.warning("Convertendo índice para timestamp no sys_df; valores inválidos ficarão NaT.")
+        except Exception:
+            sys_df["timestamp"] = pd.NaT
+            st.error("Coluna 'timestamp' não encontrada em system_metrics_timeline; gráficos podem ficar vazios.")
 sys_df = sys_df.melt(id_vars=["timestamp"], var_name="métrica", value_name="percentual")
 
 sys_df["tempo_metrica"] = sys_df["timestamp"].dt.strftime("%H:%M") + " - " + sys_df["métrica"]
