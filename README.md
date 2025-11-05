@@ -1,6 +1,8 @@
-# Tech Challenge - Fase 01
+# Pós Tech - Machine Learnign Engineering
 
-Projeto de web scraping com API REST para coleta e análise de dados de livros.
+## Fase 1 
+
+Projeto de web scraping com API REST para coleta e análise de dados para recomendação de livros.
 
 ## Executando o projeto
 
